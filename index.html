@@ -417,9 +417,13 @@ async function syncPush() {
     showToast('请先配置 GitHub Token！');
     openSettings(); return;
   }
+
+  const total = gardenData.reduce((s, g) => s + g.flowers.length, 0);
+  const ok = confirm(`确认保存到云端？\n\n当前数据：${gardenData.length} 位花匠，${total} 朵花\n\n保存后所有人刷新即可看到最新数据。`);
+  if (!ok) return;
+
   setSyncStatus('loading', '正在保存到云端…');
   try {
-    // Get current file SHA (required for update)
     const apiBase = `https://api.github.com/repos/${repo}/contents/data.json`;
     const getResp = await fetch(apiBase, {
       headers: { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github.v3+json' }
@@ -429,7 +433,6 @@ async function syncPush() {
       const info = await getResp.json();
       sha = info.sha || '';
     }
-    // Upload new content
     const content = btoa(unescape(encodeURIComponent(JSON.stringify(gardenData, null, 2))));
     const body = { message: '更新花园数据', content, ...(sha ? { sha } : {}) };
     const putResp = await fetch(apiBase, {
