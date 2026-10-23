@@ -201,6 +201,24 @@
   .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: #2d5a3d; color: white; padding: 9px 20px; border-radius: 22px; font-size: .88rem; z-index: 2000; transition: transform .3s, opacity .3s; opacity: 0; pointer-events: none; }
   .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 
+  /* history tab */
+  .history-wrap { max-width: 720px; margin: 0 auto; padding: 12px 16px 32px; }
+  .history-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .history-header h3 { font-size: .95rem; color: var(--muted); font-weight: 600; }
+  .history-item {
+    background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 14px; margin-bottom: 7px; display: flex; align-items: flex-start; gap: 12px;
+  }
+  .history-icon { font-size: 1.2rem; flex-shrink: 0; margin-top: 1px; }
+  .history-body { flex: 1; }
+  .history-body .h-action { font-size: .9rem; font-weight: 600; }
+  .history-body .h-time { font-size: .78rem; color: var(--muted); margin-top: 2px; }
+  .history-item.add { border-left: 3px solid #2ecc71; }
+  .history-item.del { border-left: 3px solid #e74c3c; }
+  .history-item.rename { border-left: 3px solid #3498db; }
+  .history-item.sync { border-left: 3px solid var(--green); }
+  .history-empty { text-align: center; padding: 40px; color: var(--muted); }
+
   footer { text-align: center; padding: 18px; color: var(--muted); font-size: .78rem; border-top: 1px solid var(--border); margin-top: 8px; }
 </style>
 </head>
@@ -235,6 +253,7 @@
 <div class="tabs-wrap">
   <button class="tab-btn active" id="tab-gardener" onclick="switchTab('gardener')">🌸 花匠视图</button>
   <button class="tab-btn" id="tab-flower" onclick="switchTab('flower')">🌺 花朵视图</button>
+  <button class="tab-btn" id="tab-history" onclick="switchTab('history')">📋 历史记录</button>
 </div>
 
 <!-- Actions bar -->
@@ -253,6 +272,11 @@
 <!-- Panel: Flower View -->
 <div class="panel" id="panel-flower">
   <div class="flower-list-grid" id="flowerList"></div>
+</div>
+
+<!-- Panel: History -->
+<div class="panel" id="panel-history">
+  <div class="history-wrap" id="historyList"></div>
 </div>
 
 <!-- Modal: Add Gardener -->
@@ -340,6 +364,9 @@
 <footer>🌿 我的花园世界 · 执 &nbsp;|&nbsp; 红花 🔴 金花 🟡 紫花 🟣</footer>
 
 <script>
+// Cloud history embedded in HTML (synced on push)
+const INITIAL_HISTORY = [];
+
 // ============================================================
 // INITIAL DATA (from Excel, colors determined by font color)
 // ============================================================
@@ -418,6 +445,12 @@ async function syncPush() {
     const newDataStr = JSON.stringify(gardenData);
     html = html.replace(/const INITIAL_DATA = \[[\s\S]*?\];/, 'const INITIAL_DATA = ' + newDataStr + ';');
 
+    // Merge local history into cloud INITIAL_HISTORY and sync
+    const localHistForSync = getHistory();
+    const existCloud = INITIAL_HISTORY || [];
+    const mergedHist = [...localHistForSync, ...existCloud.filter(ch => !localHistForSync.some(lh => lh.time === ch.time && lh.action === ch.action))].slice(0, 300);
+    html = html.replace(/const INITIAL_HISTORY = \[[\s\S]*?\];/, 'const INITIAL_HISTORY = ' + JSON.stringify(mergedHist) + ';');
+
     // Encode and push back
     const newContent = btoa(unescape(encodeURIComponent(html)));
     const putResp = await fetch(apiBase, {
@@ -431,6 +464,7 @@ async function syncPush() {
     }
     setSyncStatus('ok', '已保存到云端 · ' + new Date().toLocaleTimeString());
     showToast('☁️ 已同步！所有人刷新页面（等GitHub Pages更新约1分钟）即可看到最新数据。');
+    addHistory('sync', '☁️', '保存到云端（' + gardenData.length + ' 位花匠，' + total + ' 朵花）');
     // Update localStorage version so local stays in sync
     localStorage.setItem('gardenData_zhi', JSON.stringify(gardenData));
     localStorage.setItem('gardenData_zhi_ver', 'v4');
@@ -446,6 +480,51 @@ function saveLocal() {
 }
 
 // ============================================================
+// HISTORY
+// ============================================================
+function getHistory() {
+  try { return JSON.parse(localStorage.getItem('garden_history') || '[]'); } catch { return []; }
+}
+function addHistory(type, icon, action) {
+  const hist = getHistory();
+  hist.unshift({ type, icon, action, time: new Date().toLocaleString('zh-CN') });
+  if (hist.length > 200) hist.length = 200;
+  localStorage.setItem('garden_history', JSON.stringify(hist));
+}
+function clearHistory() {
+  if (!confirm('确认清除所有历史记录？')) return;
+  localStorage.removeItem('garden_history');
+  renderHistoryView();
+}
+function renderHistoryView() {
+  const localHist = getHistory();
+  const cloudHist = INITIAL_HISTORY || [];
+  const container = document.getElementById('historyList');
+  const renderItems = (items) => items.map(h => `
+    <div class="history-item ${h.type}">
+      <div class="history-icon">${h.icon}</div>
+      <div class="history-body">
+        <div class="h-action">${h.action}</div>
+        <div class="h-time">🕐 ${h.time}</div>
+      </div>
+    </div>`).join('');
+
+  let html2 = '';
+  if (localHist.length) {
+    html2 += `<div class="history-header"><h3>📱 本设备记录（${localHist.length} 条）</h3><button class="btn btn-danger btn-sm" onclick="clearHistory()">🗑 清除本地</button></div>`;
+    html2 += renderItems(localHist);
+  }
+  if (cloudHist.length) {
+    html2 += `<div style="margin:16px 0 8px;font-size:.85rem;font-weight:700;color:var(--green)">☁️ 云端历史（${cloudHist.length} 条，所有人可见）</div>`;
+    html2 += renderItems(cloudHist);
+  }
+  if (!html2) {
+    html2 = '<div class="history-empty">📋 暂无历史记录<br><small>添加、删除花匠或花朵后会自动记录</small></div>';
+  }
+  container.innerHTML = html2;
+}
+
+// ============================================================
 // RENDER
 // ============================================================
 function render() {
@@ -453,7 +532,8 @@ function render() {
   if (searchQuery.trim()) { renderSearch(); return; }
   document.getElementById('resultsPanel').classList.remove('open');
   if (currentTab === 'gardener') renderGardenerView(gardenData);
-  else renderFlowerView();
+  else if (currentTab === 'flower') renderFlowerView();
+  else if (currentTab === 'history') renderHistoryView();
 }
 
 function updateStats() {
@@ -600,6 +680,7 @@ function confirmAddGardener() {
   if (!name) { showToast('请输入名称！'); return; }
   if (gardenData.some(g => g.gardener === name)) { showToast('该花匠已存在！'); return; }
   gardenData.push({ gardener: name, flowers: [] });
+  addHistory('add', '🌱', '新增花匠：' + name);
   saveLocal(); closeModal('modalAddGardener'); render(); showToast('🌱 已添加花匠 "' + name + '"');
 }
 
@@ -608,7 +689,9 @@ function confirmAddFlower() {
   const name = document.getElementById('newFlowerName').value.trim();
   const type = document.getElementById('newFlowerType').value;
   if (!name) { showToast('请输入花名！'); return; }
+  const gardenerName = gardenData[addFlowerTargetIdx].gardener;
   gardenData[addFlowerTargetIdx].flowers.push({ name, type });
+  addHistory('add', '🌸', '新增花朵：' + name + '（' + (type||'未分类') + '）→ 花匠：' + gardenerName);
   saveLocal(); closeModal('modalAddFlower'); render(); showToast('🌸 已添加 "' + name + '"');
 }
 
@@ -616,21 +699,27 @@ function openRename(gIdx) { renameIdx = gIdx; document.getElementById('renameInp
 function confirmRename() {
   const name = document.getElementById('renameInput').value.trim();
   if (!name) { showToast('请输入名称！'); return; }
+  const oldName = gardenData[renameIdx].gardener;
   gardenData[renameIdx].gardener = name;
+  addHistory('rename', '✏️', '花匠改名：' + oldName + ' → ' + name);
   saveLocal(); closeModal('modalRename'); render(); showToast('✏️ 名称已更新');
 }
 
 function deleteGardener(gIdx) {
   if (!confirm('确认删除花匠 "' + gardenData[gIdx].gardener + '" 及其所有花朵？')) return;
   const name = gardenData[gIdx].gardener;
+  const flowerCount = gardenData[gIdx].flowers.length;
   gardenData.splice(gIdx, 1);
+  addHistory('del', '🗑', '删除花匠：' + name + '（共 ' + flowerCount + ' 朵花）');
   saveLocal(); render(); showToast('🗑 已删除 "' + name + '"');
 }
 
 function deleteFlower(gIdx, fIdx) {
-  const name = gardenData[gIdx].flowers[fIdx].name;
+  const gardenerName = gardenData[gIdx].gardener;
+  const flower = gardenData[gIdx].flowers[fIdx];
   gardenData[gIdx].flowers.splice(fIdx, 1);
-  saveLocal(); render(); showToast('🗑 已删除 "' + name + '"');
+  addHistory('del', '🌺', '删除花朵：' + flower.name + '（' + (flower.type||'未分类') + '）← 花匠：' + gardenerName);
+  saveLocal(); render(); showToast('🗑 已删除 "' + flower.name + '"');
 }
 
 // ============================================================
