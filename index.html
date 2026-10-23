@@ -379,12 +379,22 @@ function setSyncStatus(status, msg) {
   txt.textContent = msg;
 }
 
+const DATA_VERSION = 'v2';
+
 async function syncPull() {
   const { gistId, token } = getCfg();
   if (!gistId) {
-    // fallback to localStorage
+    // fallback to localStorage, but check version
+    const savedVer = localStorage.getItem('gardenData_zhi_ver');
     const saved = localStorage.getItem('gardenData_zhi');
-    gardenData = saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(INITIAL_DATA));
+    if (saved && savedVer === DATA_VERSION) {
+      gardenData = JSON.parse(saved);
+    } else {
+      // version mismatch or no data: use INITIAL_DATA (has types)
+      gardenData = JSON.parse(JSON.stringify(INITIAL_DATA));
+      localStorage.setItem('gardenData_zhi', JSON.stringify(gardenData));
+      localStorage.setItem('gardenData_zhi_ver', DATA_VERSION);
+    }
     setSyncStatus('', '本地模式（未配置云端同步）');
     render(); return;
   }
@@ -401,8 +411,15 @@ async function syncPull() {
     setSyncStatus('ok', '云端同步成功 · ' + new Date().toLocaleTimeString());
   } catch(e) {
     setSyncStatus('err', '云端加载失败：' + e.message + '，使用本地数据');
+    const savedVer = localStorage.getItem('gardenData_zhi_ver');
     const saved = localStorage.getItem('gardenData_zhi');
-    gardenData = saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(INITIAL_DATA));
+    if (saved && savedVer === DATA_VERSION) {
+      gardenData = JSON.parse(saved);
+    } else {
+      gardenData = JSON.parse(JSON.stringify(INITIAL_DATA));
+      localStorage.setItem('gardenData_zhi', JSON.stringify(gardenData));
+      localStorage.setItem('gardenData_zhi_ver', DATA_VERSION);
+    }
   }
   render();
 }
