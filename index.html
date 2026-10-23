@@ -314,22 +314,22 @@
   </div>
 </div>
 
-<!-- Modal: Settings (Gist sync) -->
+<!-- Modal: Settings -->
 <div class="modal-overlay" id="modalSettings">
   <div class="modal">
     <h2>⚙️ 云端同步设置</h2>
-    <p class="hint">使用 GitHub Gist 实现所有人数据同步。需要设置一次，之后所有人修改都会自动同步。</p>
-    <label>Gist ID</label>
-    <input type="text" id="cfgGistId" placeholder="例如：abc123def456…">
-    <label>GitHub Token（需要 gist 权限）</label>
+    <p class="hint">数据存储在 GitHub 仓库中，所有人共用同一份。修改后点"☁️ 保存到云端"，其他人刷新即可看到。</p>
+    <label>GitHub Token（需要 repo/contents 写入权限）</label>
     <input type="password" id="cfgToken" placeholder="ghp_xxxxxxxxxxxxx">
     <p class="hint">
-      创建 Gist：<a href="https://gist.github.com" target="_blank">gist.github.com</a>，文件名填 <b>garden.json</b>，内容填 <code>[]</code>，选 Public，保存后复制 URL 末尾的 ID。<br><br>
-      创建 Token：GitHub → Settings → Developer settings → Personal access tokens → 勾选 <b>gist</b> 权限。
+      创建 Token：<br>
+      GitHub → Settings → Developer settings → Personal access tokens (classic)<br>
+      → New token → 勾选 <b>repo</b> 权限 → Generate token<br>
+      复制生成的 token（ghp_xxx...），只显示一次，请保存好。<br><br>
+      仓库已固定为：<b>dadadadadadalian/Zhi-graden</b>
     </p>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="closeModal('modalSettings')">取消</button>
-      <button class="btn btn-secondary" onclick="testGist()">测试连接</button>
       <button class="btn btn-primary" onclick="saveSettings()">保存设置</button>
     </div>
   </div>
@@ -367,8 +367,8 @@ let currentTab = 'gardener';
 // ============================================================
 function getCfg() {
   return {
-    gistId: localStorage.getItem('gist_id') || '',
-    token: localStorage.getItem('gist_token') || ''
+    repo: localStorage.getItem('sync_repo') || 'dadadadadadalian/Zhi-graden',
+    token: localStorage.getItem('sync_token') || ''
   };
 }
 
@@ -382,35 +382,22 @@ function setSyncStatus(status, msg) {
 const DATA_VERSION = 'v2';
 
 async function syncPull() {
-  const { gistId, token } = getCfg();
-  if (!gistId) {
-    // fallback to localStorage, but check version
-    const savedVer = localStorage.getItem('gardenData_zhi_ver');
-    const saved = localStorage.getItem('gardenData_zhi');
-    if (saved && savedVer === DATA_VERSION) {
-      gardenData = JSON.parse(saved);
-    } else {
-      // version mismatch or no data: use INITIAL_DATA (has types)
-      gardenData = JSON.parse(JSON.stringify(INITIAL_DATA));
-      localStorage.setItem('gardenData_zhi', JSON.stringify(gardenData));
-      localStorage.setItem('gardenData_zhi_ver', DATA_VERSION);
-    }
-    setSyncStatus('', '本地模式（未配置云端同步）');
-    render(); return;
-  }
+  const { repo, token } = getCfg();
+  // Read from raw.githubusercontent.com (no auth needed for public repo)
   setSyncStatus('loading', '正在从云端加载…');
   try {
-    const headers = { 'Accept': 'application/vnd.github.v3+json' };
-    if (token) headers['Authorization'] = 'token ' + token;
-    const resp = await fetch(`https://api.github.com/gists/${gistId}`, { headers });
+    const url = `https://raw.githubusercontent.com/${repo}/main/data.json?t=${Date.now()}`;
+    const resp = await fetch(url);
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const json = await resp.json();
-    const fileContent = json.files['garden.json']?.content;
-    if (!fileContent) throw new Error('找不到 garden.json 文件');
-    gardenData = JSON.parse(fileContent);
+    const text = await resp.text();
+    const parsed = JSON.parse(text);
+    if (!Array.isArray(parsed)) throw new Error('数据格式错误');
+    gardenData = parsed;
+    localStorage.setItem('gardenData_zhi', JSON.stringify(gardenData));
+    localStorage.setItem('gardenData_zhi_ver', DATA_VERSION);
     setSyncStatus('ok', '云端同步成功 · ' + new Date().toLocaleTimeString());
   } catch(e) {
-    setSyncStatus('err', '云端加载失败：' + e.message + '，使用本地数据');
+    setSyncStatus('err', '云端加载失败（' + e.message + '），使用本地数据');
     const savedVer = localStorage.getItem('gardenData_zhi_ver');
     const saved = localStorage.getItem('gardenData_zhi');
     if (saved && savedVer === DATA_VERSION) {
@@ -425,28 +412,41 @@ async function syncPull() {
 }
 
 async function syncPush() {
-  const { gistId, token } = getCfg();
-  if (!gistId || !token) {
-    showToast('请先配置云端同步设置！');
+  const { repo, token } = getCfg();
+  if (!token) {
+    showToast('请先配置 GitHub Token！');
     openSettings(); return;
   }
   setSyncStatus('loading', '正在保存到云端…');
   try {
-    const body = JSON.stringify({
-      files: { 'garden.json': { content: JSON.stringify(gardenData, null, 2) } }
+    // Get current file SHA (required for update)
+    const apiBase = `https://api.github.com/repos/${repo}/contents/data.json`;
+    const getResp = await fetch(apiBase, {
+      headers: { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github.v3+json' }
     });
-    const resp = await fetch(`https://api.github.com/gists/${gistId}`, {
-      method: 'PATCH',
+    let sha = '';
+    if (getResp.ok) {
+      const info = await getResp.json();
+      sha = info.sha || '';
+    }
+    // Upload new content
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(gardenData, null, 2))));
+    const body = { message: '更新花园数据', content, ...(sha ? { sha } : {}) };
+    const putResp = await fetch(apiBase, {
+      method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/vnd.github.v3+json',
-        'Authorization': 'token ' + token
+        'Authorization': 'token ' + token,
+        'Accept': 'application/vnd.github.v3+json'
       },
-      body
+      body: JSON.stringify(body)
     });
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    if (!putResp.ok) {
+      const err = await putResp.json();
+      throw new Error(err.message || 'HTTP ' + putResp.status);
+    }
     setSyncStatus('ok', '已保存到云端 · ' + new Date().toLocaleTimeString());
-    showToast('☁️ 已同步到云端！所有人刷新即可看到最新数据。');
+    showToast('☁️ 已同步！所有人刷新页面即可看到最新数据。');
   } catch(e) {
     setSyncStatus('err', '保存失败：' + e.message);
     showToast('❌ 保存失败：' + e.message);
@@ -669,33 +669,14 @@ function confirmImport() {
 // ============================================================
 function openSettings() {
   const cfg = getCfg();
-  document.getElementById('cfgGistId').value = cfg.gistId;
   document.getElementById('cfgToken').value = cfg.token;
   openModal('modalSettings');
 }
 function saveSettings() {
-  const gistId = document.getElementById('cfgGistId').value.trim();
   const token = document.getElementById('cfgToken').value.trim();
-  localStorage.setItem('gist_id', gistId);
-  localStorage.setItem('gist_token', token);
+  localStorage.setItem('sync_token', token);
   closeModal('modalSettings');
-  showToast('设置已保存！正在重新加载数据…');
-  syncPull();
-}
-async function testGist() {
-  const gistId = document.getElementById('cfgGistId').value.trim();
-  const token = document.getElementById('cfgToken').value.trim();
-  if (!gistId) { showToast('请填写 Gist ID！'); return; }
-  showToast('正在测试连接…');
-  try {
-    const headers = { 'Accept': 'application/vnd.github.v3+json' };
-    if (token) headers['Authorization'] = 'token ' + token;
-    const resp = await fetch(`https://api.github.com/gists/${gistId}`, { headers });
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const json = await resp.json();
-    const hasFile = !!json.files['garden.json'];
-    showToast(hasFile ? '✅ 连接成功，找到 garden.json！' : '⚠️ 连接成功，但找不到 garden.json 文件');
-  } catch(e) { showToast('❌ 连接失败：' + e.message); }
+  showToast('✅ Token 已保存！');
 }
 
 // ============================================================
