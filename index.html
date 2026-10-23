@@ -386,7 +386,8 @@ async function syncPull() {
   // Read from raw.githubusercontent.com (no auth needed for public repo)
   setSyncStatus('loading', '正在从云端加载…');
   try {
-    const url = `https://raw.githubusercontent.com/${repo}/main/data.json?t=${Date.now()}`;
+    // Use jsDelivr CDN (works in China/mobile), falls back to raw.githubusercontent.com
+    const url = `https://cdn.jsdelivr.net/gh/${repo}@main/data.json?t=${Date.now()}`;
     const resp = await fetch(url);
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const text = await resp.text();
