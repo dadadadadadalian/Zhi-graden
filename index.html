@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>我的花园世界 · 执</title>
+<style>
+  :root {
+    --green: #4a7c59;
+    --light-green: #7fb08a;
+    --bg: #f5f0e8;
+    --card-bg: #fffdf8;
+    --accent: #c97b63;
+    --text: #3a3028;
+    --muted: #8a7a6a;
+    --border: #e0d5c5;
+    --tag-bg: #e8f5ec;
+    --tag-color: #3a7050;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* Header */
+  header {
+    background: linear-gradient(135deg, #2d5a3d 0%, #4a7c59 60%, #6b9e78 100%);
+    color: white;
+    padding: 28px 20px 20px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: "🌸🌿🌺🌱🌼🌻🌷";
+    display: block;
+    font-size: 1.4rem;
+    margin-bottom: 8px;
+    letter-spacing: 4px;
+    opacity: 0.85;
+  }
+  header h1 {
+    font-size: clamp(1.6rem, 5vw, 2.4rem);
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  }
+  header p {
+    margin-top: 6px;
+    font-size: 0.9rem;
+    opacity: 0.85;
+  }
+
+  /* Search */
+  .search-wrap {
+    background: white;
+    padding: 16px 16px 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  .search-row {
+    display: flex;
+    gap: 8px;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+  .search-row input {
+    flex: 1;
+    border: 2px solid var(--border);
+    border-radius: 24px;
+    padding: 10px 18px;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s;
+    font-family: inherit;
+  }
+  .search-row input:focus { border-color: var(--light-green); }
+  .search-row button {
+    background: var(--green);
+    color: white;
+    border: none;
+    border-radius: 24px;
+    padding: 10px 20px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    white-space: nowrap;
+    font-family: inherit;
+    transition: background 0.2s;
+  }
+  .search-row button:hover { background: var(--light-green); }
+
+  .search-stats {
+    text-align: center;
+    font-size: 0.82rem;
+    color: var(--muted);
+    padding: 6px 0 10px;
+  }
+
+  /* Actions bar */
+  .actions-bar {
+    max-width: 960px;
+    margin: 16px auto 4px;
+    padding: 0 16px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-family: inherit;
+    transition: all 0.2s;
+    font-weight: 500;
+  }
+  .btn-primary { background: var(--green); color: white; }
+  .btn-primary:hover { background: var(--light-green); }
+  .btn-secondary { background: white; color: var(--green); border: 2px solid var(--green); }
+  .btn-secondary:hover { background: var(--tag-bg); }
+  .btn-danger { background: #fdf0ee; color: #c0392b; border: 2px solid #e8b4ae; }
+  .btn-danger:hover { background: #fce4e1; }
+  .btn-sm { padding: 4px 12px; font-size: 0.82rem; }
+
+  /* Cards grid */
+  .cards-grid {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 12px 16px 32px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+
+  .card {
+    background: var(--card-bg);
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    transition: box-shadow 0.2s, transform 0.2s;
+  }
+  .card:hover {
+    box-shadow: 0 6px 20px rgba(74,124,89,0.15);
+    transform: translateY(-2px);
+  }
+  .card.highlight {
+    border-color: var(--light-green);
+    box-shadow: 0 0 0 3px rgba(127,176,138,0.3);
+  }
+
+  .card-header {
+    background: linear-gradient(135deg, #3d6b4f, #5a8e6a);
+    color: white;
+    padding: 14px 16px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .card-header h3 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+  .card-header-actions { display: flex; gap: 6px; }
+  .icon-btn {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    border-radius: 8px;
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s;
+  }
+  .icon-btn:hover { background: rgba(255,255,255,0.35); }
+
+  .flower-count {
+    font-size: 0.78rem;
+    opacity: 0.85;
+    background: rgba(255,255,255,0.15);
+    border-radius: 10px;
+    padding: 2px 8px;
+  }
+
+  .card-body { padding: 8px 12px 12px; }
+
+  .flower-table { width: 100%; border-collapse: collapse; }
+  .flower-table th {
+    text-align: left;
+    font-size: 0.75rem;
+    color: var(--muted);
+    padding: 5px 6px 4px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  .flower-table td {
+    padding: 6px 6px;
+    font-size: 0.88rem;
+    border-bottom: 1px solid #f0ebe0;
+    vertical-align: middle;
+  }
+  .flower-table tr:last-child td { border-bottom: none; }
+  .flower-table tr.match-row { background: #fffae8; }
+
+  .flower-name { font-weight: 500; }
+  .flower-name.match { color: var(--accent); }
+
+  .type-tag {
+    display: inline-block;
+    background: var(--tag-bg);
+    color: var(--tag-color);
+    border-radius: 10px;
+    padding: 1px 9px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .type-tag:hover { background: #d0e9d8; }
+  .type-tag.empty {
+    background: #f2f0ec;
+    color: #bbb;
+  }
+
+  .type-edit-input {
+    border: 1px solid var(--light-green);
+    border-radius: 10px;
+    padding: 2px 8px;
+    font-size: 0.82rem;
+    font-family: inherit;
+    outline: none;
+    width: 80px;
+  }
+
+  .flower-actions { opacity: 0; transition: opacity 0.15s; text-align: right; }
+  .flower-table tr:hover .flower-actions { opacity: 1; }
+
+  .add-flower-row td {
+    padding-top: 8px;
+  }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+    grid-column: 1 / -1;
+  }
+  .empty-state .emoji { font-size: 3rem; margin-bottom: 10px; }
+
+  /* Modal */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+    animation: slideUp 0.2s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .modal h2 { font-size: 1.1rem; margin-bottom: 16px; color: var(--green); }
+  .modal label { display: block; font-size: 0.88rem; color: var(--muted); margin-bottom: 4px; margin-top: 12px; }
+  .modal input, .modal select {
+    width: 100%;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    padding: 9px 12px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .modal input:focus, .modal select:focus { border-color: var(--light-green); }
+  .modal-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: #2d5a3d;
+    color: white;
+    padding: 10px 22px;
+    border-radius: 24px;
+    font-size: 0.92rem;
+    z-index: 2000;
+    transition: transform 0.3s, opacity 0.3s;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+  /* Search results panel */
+  .results-panel {
+    display: none;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 16px 16px;
+  }
+  .results-panel.open { display: block; }
+  .result-item {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .result-item .ri-flower { font-size: 1.4rem; }
+  .result-item .ri-info h4 { font-size: 0.95rem; font-weight: 600; }
+  .result-item .ri-info p { font-size: 0.82rem; color: var(--muted); margin-top: 2px; }
+  .result-item .ri-gardener {
+    margin-left: auto;
+    background: var(--tag-bg);
+    color: var(--tag-color);
+    border-radius: 10px;
+    padding: 3px 12px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  footer {
+    text-align: center;
+    padding: 20px;
+    color: var(--muted);
+    font-size: 0.8rem;
+    border-top: 1px solid var(--border);
+    margin-top: 10px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🌿 我的花园世界 · 执</h1>
+  <p>记录每位花匠与他们珍藏的花朵</p>
+</header>
+
+<!-- Search -->
+<div class="search-wrap">
+  <div class="search-row">
+    <input type="text" id="searchInput" placeholder="搜索花匠或花名…" oninput="doSearch()" autocomplete="off">
+    <button onclick="clearSearch()">清除</button>
+  </div>
+  <div class="search-stats" id="statsBar"></div>
+</div>
+
+<!-- Search results -->
+<div class="results-panel" id="resultsPanel"></div>
+
+<!-- Actions -->
+<div class="actions-bar">
+  <button class="btn btn-primary" onclick="openAddGardener()">🌱 添加花匠</button>
+  <button class="btn btn-secondary" onclick="exportData()">📤 导出数据</button>
+  <button class="btn btn-secondary" onclick="importData()">📥 导入数据</button>
+</div>
+
+<!-- Cards -->
+<div class="cards-grid" id="cardsGrid"></div>
+
+<!-- Add Gardener Modal -->
+<div class="modal-overlay" id="modalAddGardener">
+  <div class="modal">
+    <h2>🌱 添加新花匠</h2>
+    <label>花匠名称</label>
+    <input type="text" id="newGardenerName" placeholder="请输入花匠名称…">
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modalAddGardener')">取消</button>
+      <button class="btn btn-primary" onclick="confirmAddGardener()">确认添加</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Flower Modal -->
+<div class="modal-overlay" id="modalAddFlower">
+  <div class="modal">
+    <h2>🌸 添加新花朵</h2>
+    <label>花名</label>
+    <input type="text" id="newFlowerName" placeholder="请输入花名…">
+    <label>类型（可选）</label>
+    <input type="text" id="newFlowerType" placeholder="如：玫瑰、牡丹…">
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modalAddFlower')">取消</button>
+      <button class="btn btn-primary" onclick="confirmAddFlower()">确认添加</button>
+    </div>
+  </div>
+</div>
+
+<!-- Rename Gardener Modal -->
+<div class="modal-overlay" id="modalRenameGardener">
+  <div class="modal">
+    <h2>✏️ 修改花匠名称</h2>
+    <label>新名称</label>
+    <input type="text" id="renameGardenerInput" placeholder="请输入新名称…">
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modalRenameGardener')">取消</button>
+      <button class="btn btn-primary" onclick="confirmRenameGardener()">确认修改</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import Modal -->
+<div class="modal-overlay" id="modalImport">
+  <div class="modal">
+    <h2>📥 导入数据 (JSON)</h2>
+    <label>粘贴 JSON 数据</label>
+    <textarea id="importText" style="width:100%;height:120px;border:2px solid #e0d5c5;border-radius:10px;padding:8px;font-size:0.85rem;font-family:monospace;outline:none;resize:vertical;"></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal('modalImport')">取消</button>
+      <button class="btn btn-primary" onclick="confirmImport()">确认导入</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<footer>🌿 我的花园世界 · 执 &nbsp;|&nbsp; 数据保存在本地，支持导出/导入备份</footer>
+
+<script>
+// ---- Initial Data ----
+const INITIAL_DATA = [
+  {"gardener":"陶绮兰","flowers":[{"name":"粉黛德鸢","type":""},{"name":"紫晶灯笼花","type":""},{"name":"银白雪柳","type":""},{"name":"伯利恒之星","type":""},{"name":"橙黄虞美人","type":""},{"name":"薄红虞美人","type":""},{"name":"曼珠沙华","type":""},{"name":"樱红跳舞兰","type":""},{"name":"粉花绮梦","type":""},{"name":"芳蕊琼莲","type":""},{"name":"缘定鹊桥","type":""},{"name":"灿若繁星","type":""},{"name":"鹊影芳扇","type":""},{"name":"花扇鹊嬉","type":""},{"name":"云松墨笺","type":""},{"name":"粉樱蝶舞玫瑰","type":""},{"name":"宝珠玉兰","type":""},{"name":"花筵鼓韵","type":""},{"name":"秋分.枫华玉律","type":""},{"name":"桃李承辉","type":""},{"name":"瑶华芙光","type":""},{"name":"葡萄紫牡丹菊","type":""},{"name":"绀紫飞燕草","type":""},{"name":"白灵逐浪","type":""},{"name":"有龙则灵","type":""},{"name":"紫灵福禄","type":""},{"name":"芍华茗宴","type":""}]},
+  {"gardener":"段欣宜","flowers":[{"name":"云松墨笺","type":""},{"name":"凉酥山雪","type":""},{"name":"纯白木香花","type":""},{"name":"花涧听泉","type":""},{"name":"盈粉芍药","type":""},{"name":"嫣紫金鱼草","type":""},{"name":"青璃火焰花","type":""},{"name":"花椅轻摇","type":""},{"name":"幽蓝绿绒蒿","type":""},{"name":"棉花小熊","type":""},{"name":"黄焰","type":""},{"name":"灿若繁星","type":""},{"name":"晴蓝耧斗菜","type":""},{"name":"暮山耧斗菜","type":""},{"name":"幽香绮囊","type":""},{"name":"蓝叶苏铁","type":""},{"name":"粉米露薇花","type":""},{"name":"奶黄花毛茛","type":""},{"name":"朝晖姜荷花","type":""},{"name":"明黄凌霄花","type":""},{"name":"天下一墨","type":""},{"name":"橘光朱顶红","type":""},{"name":"火蕊朱顶红","type":""},{"name":"雾紫堇兰","type":""},{"name":"雪缨大花芙蓉","type":""}]},
+  {"gardener":"孤影","flowers":[{"name":"云松墨笺","type":""},{"name":"紫霁大岩桐","type":""},{"name":"伯利恒之星","type":""},{"name":"星河映蕊","type":""},{"name":"泼墨","type":""},{"name":"青璃火焰花","type":""},{"name":"灿若繁星","type":""},{"name":"曼珠沙华","type":""},{"name":"宝珠玉兰","type":""},{"name":"缃桃六初花","type":""},{"name":"比翼双飞","type":""},{"name":"嫣紫金鱼草","type":""},{"name":"黄焰","type":""},{"name":"萤栖碧绡","type":""},{"name":"盈粉大花萱草","type":""},{"name":"天下一墨","type":""},{"name":"霁蓝堇兰","type":""},{"name":"比翼双飞","type":""}]},
+  {"gardener":"林绮玉","flowers":[{"name":"云松墨笺","type":""},{"name":"花椅轻摇","type":""},{"name":"宝珠玉兰","type":""},{"name":"龙舟竞渡","type":""},{"name":"落英浮香","type":""},{"name":"泼墨","type":""},{"name":"凉酥山雪","type":""},{"name":"青璃火焰花","type":""},{"name":"黄焰","type":""},{"name":"悠游云间","type":""},{"name":"珠宝之心","type":""},{"name":"纯白木香花","type":""},{"name":"火蕊朱顶红","type":""},{"name":"粉米露薇花","type":""},{"name":"棉花小熊","type":""},{"name":"彤云六初花","type":""},{"name":"橘光朱顶红","type":""},{"name":"晴山蔷薇花","type":""},{"name":"柔蓝飞燕草","type":""},{"name":"粉胭海棠花","type":""},{"name":"杏坛启学","type":""},{"name":"比翼双飞","type":""},{"name":"紫曜牡丹","type":""},{"name":"绯云韶光","type":""},{"name":"灿若繁星","type":""}]},
+  {"gardener":"柳如眉","flowers":[{"name":"缘定鹊桥","type":""},{"name":"比翼双飞","type":""},{"name":"花扇鹊嬉","type":""},{"name":"连理双枝","type":""},{"name":"粉花绮梦","type":""},{"name":"珠匣粉芙蓉","type":""},{"name":"丹影蛾蝶花","type":""},{"name":"碧玉六初花","type":""},{"name":"柔粉松虫草","type":""},{"name":"岚紫酒杯花","type":""},{"name":"鸢花芳集","type":""},{"name":"棉花小熊","type":""},{"name":"云松墨笺","type":""},{"name":"皎如明月","type":""},{"name":"夕蜻莒序","type":""},{"name":"雪缨大花芙蓉","type":""},{"name":"粉羽朱顶红","type":""},{"name":"桃云木香花","type":""},{"name":"春晓木香花","type":""},{"name":"伯利恒之星","type":""},{"name":"曼珠沙华","type":""}]},
+  {"gardener":"蔡铭娴","flowers":[{"name":"星河映蕊","type":""},{"name":"比翼双飞","type":""},{"name":"云松墨笺","type":""},{"name":"落英浮香","type":""},{"name":"黄焰","type":""},{"name":"泼墨","type":""},{"name":"青璃火焰花","type":""}]},
+  {"gardener":"别枝","flowers":[{"name":"龙舟竞渡","type":""},{"name":"雪樱大花芙蓉","type":""},{"name":"云松墨笺","type":""},{"name":"梦蝶花章","type":""},{"name":"伯利恒之星","type":""},{"name":"宝珠玉兰","type":""},{"name":"花扇鹊嬉","type":""},{"name":"黄焰","type":""},{"name":"珠宝之心","type":""},{"name":"朝晖姜荷花","type":""},{"name":"盈粉芍药","type":""},{"name":"粉花绮梦","type":""},{"name":"星河映蕊","type":""},{"name":"泼墨","type":""},{"name":"幽香绮囊","type":""},{"name":"青璃火焰花","type":""},{"name":"花洞听泉","type":""},{"name":"曼珠沙华","type":""},{"name":"熏紫松虫草","type":""},{"name":"暮山缕斗菜","type":""},{"name":"灿若繁星","type":""},{"name":"芳蕊琼莲","type":""},{"name":"缘定鹊桥","type":""},{"name":"浅汐蓝蝴蝶","type":""},{"name":"玫红古代稀","type":""},{"name":"月白酒杯花","type":""},{"name":"黄澄蛾蝶花","type":""}]},
+  {"gardener":"闻人以旋","flowers":[{"name":"丹红龙面花","type":""},{"name":"松绿立金花","type":""},{"name":"芳蕊琼莲","type":""},{"name":"星垂绮夜","type":""},{"name":"绯云韶光","type":""},{"name":"灿若繁星","type":""},{"name":"星河映蕊","type":""},{"name":"沐光映黄月季","type":""},{"name":"银白耀星花","type":""},{"name":"重瓣紫灯花","type":""},{"name":"丹红耧斗菜","type":""},{"name":"玉兰栖香","type":""},{"name":"绛粉大岩桐","type":""},{"name":"曜绯帝王花","type":""},{"name":"霓粉垂丝茉莉","type":""},{"name":"蜜桃花毛茛","type":""},{"name":"浅韵美女樱","type":""},{"name":"霁蓝堇兰","type":""},{"name":"杏绯德鸢","type":""},{"name":"缃黄瑞香花","type":""},{"name":"金玉良缘","type":""},{"name":"泼墨","type":""},{"name":"黄焰","type":""},{"name":"明黄松虫草","type":""},{"name":"伯利恒之星","type":""},{"name":"红香妃腊梅","type":""},{"name":"宝珠玉兰","type":""},{"name":"柔白茨菇","type":""},{"name":"黛紫虞美人","type":""},{"name":"淡粉雪柳","type":""}]},
+  {"gardener":"高佳语儿","flowers":[{"name":"棉花小熊","type":""},{"name":"比翼双飞","type":""},{"name":"灿若繁星","type":""},{"name":"杏坛启学","type":""},{"name":"宝珠玉兰","type":""}]},
+  {"gardener":"叶寄蓝","flowers":[{"name":"粉花绮梦","type":""},{"name":"黄焰","type":""},{"name":"泼墨","type":""},{"name":"花扇鹊嬉","type":""},{"name":"珠宝之心","type":""},{"name":"龙舟竞渡","type":""},{"name":"灿若繁星","type":""},{"name":"云松墨笺","type":""},{"name":"宝珠玉兰","type":""},{"name":"凉酥山雪","type":""},{"name":"青璃火焰花","type":""},{"name":"比翼双飞","type":""},{"name":"星河映蕊","type":""}]},
+  {"gardener":"姹紫嫣红","flowers":[{"name":"黄焰","type":""},{"name":"芳蕊琼莲","type":""},{"name":"花扇鹊嬉","type":""},{"name":"比翼双飞","type":""},{"name":"宝珠玉兰","type":""},{"name":"龙舟竞渡","type":""},{"name":"花椅轻摇","type":""},{"name":"青璃火焰花","type":""},{"name":"云松墨笺","type":""},{"name":"灿若繁星","type":""},{"name":"珠宝之心","type":""},{"name":"落英浮香","type":""}]},
+  {"gardener":"戴醉竹","flowers":[{"name":"棉花小熊","type":""},{"name":"花扇鹊嬉","type":""},{"name":"宝珠玉兰","type":""},{"name":"芳蕊琼莲","type":""},{"name":"比翼双飞","type":""},{"name":"粉花绮梦","type":""},{"name":"薰紫球根海棠","type":""},{"name":"星河映蕊","type":""},{"name":"灿若繁星","type":""},{"name":"云松墨笺","type":""}]},
+  {"gardener":"飞奔向颖","flowers":[{"name":"棉花小熊","type":""},{"name":"雪缨大花芙蓉","type":""},{"name":"比翼双飞","type":""},{"name":"芳蕊琼莲","type":""},{"name":"灿若繁星","type":""},{"name":"柔粉堇兰","type":""},{"name":"伯利恒之星","type":""},{"name":"粉花绮梦","type":""},{"name":"曼珠沙华","type":""},{"name":"飞黄玉兰","type":""},{"name":"黛紫绿绒蒿","type":""},{"name":"仙女散花","type":""},{"name":"幻紫铁线莲","type":""},{"name":"轻紫格桑花","type":""},{"name":"樱红跳舞兰","type":""},{"name":"桃华驻颜","type":""},{"name":"花溪灯语","type":""}]},
+  {"gardener":"不倒翁娘娘","flowers":[{"name":"朱红凌霄花","type":""},{"name":"明黄凌霄花","type":""},{"name":"白玉姜荷花","type":""},{"name":"桃绯姜荷花","type":""},{"name":"朝晖姜荷花","type":""},{"name":"桃夭飞燕草","type":""},{"name":"柔蓝飞燕草","type":""},{"name":"紫晶灯笼花","type":""},{"name":"落霞灯笼花","type":""},{"name":"紫曜牡丹","type":""},{"name":"杏色春衫","type":""},{"name":"姑苏雨蒙","type":""},{"name":"霁澜牡丹","type":""},{"name":"白灵逐浪","type":""},{"name":"桃影浮澜","type":""},{"name":"幽蓝逐影","type":""},{"name":"瑶光牡丹","type":""},{"name":"秋枫跳舞兰","type":""},{"name":"樱红跳舞兰","type":""},{"name":"白紫凌霄花","type":""},{"name":"橙心剑兰","type":""},{"name":"霁蓝紫藤花","type":""},{"name":"暮粉紫藤花","type":""},{"name":"浅绀紫藤花","type":""},{"name":"浅韵美女樱","type":""},{"name":"甜橙美女樱","type":""},{"name":"幻紫铁线莲","type":""},{"name":"奶黄花毛茛","type":""},{"name":"嫣紫金鱼草","type":""},{"name":"粉菲铁筷花","type":""},{"name":"珠匣紫芙蓉","type":""}]},
+  {"gardener":"罗碧琴","flowers":[{"name":"连理双枝","type":""},{"name":"比翼双飞","type":""},{"name":"灿若繁星","type":""},{"name":"芳蕊琼莲","type":""},{"name":"绯云韶光","type":""},{"name":"黛紫虞美人","type":""},{"name":"棉花小熊","type":""},{"name":"伯利恒之星","type":""}]},
+  {"gardener":"程娟","flowers":[{"name":"落英浮香","type":""},{"name":"龙舟竞渡","type":""},{"name":"灿若繁星","type":""},{"name":"比翼双飞","type":""},{"name":"宝珠玉兰","type":""},{"name":"星河映蕊","type":""},{"name":"泼墨","type":""},{"name":"黄焰","type":""}]},
+  {"gardener":"蘑菇大大","flowers":[{"name":"黛紫虞美人","type":""},{"name":"橙黄虞美人","type":""},{"name":"星河映蕊","type":""},{"name":"珠宝之心","type":""},{"name":"沐光映黄月季","type":""},{"name":"桃影浮澜","type":""},{"name":"凉酥山雪","type":""},{"name":"云松墨笺","type":""},{"name":"皎如明月","type":""},{"name":"灿若繁星","type":""},{"name":"花椅轻摇","type":""},{"name":"花屿闲趣","type":""},{"name":"龙舟竞渡","type":""},{"name":"伯利恒之星","type":""},{"name":"落霞灯笼花","type":""},{"name":"丹红耧斗菜","type":""},{"name":"缃黄瑞香花","type":""},{"name":"秋枫跳舞兰","type":""},{"name":"曼珠沙华","type":""},{"name":"松绿立金花","type":""},{"name":"黄焰","type":""},{"name":"泼墨","type":""},{"name":"棉花小熊","type":""},{"name":"薄红虞美人","type":""}]},
+  {"gardener":"曹惜雪","flowers":[{"name":"花屿闲趣","type":""},{"name":"花椅轻摇","type":""},{"name":"悠游云间","type":""},{"name":"珠宝之心","type":""},{"name":"宝珠玉兰","type":""},{"name":"落英浮香","type":""},{"name":"凉酥山雪","type":""},{"name":"花涧听泉","type":""},{"name":"幽香绮囊","type":""},{"name":"绯云韶光","type":""},{"name":"粉花绮梦","type":""},{"name":"青璃火焰花","type":""},{"name":"棉花小熊","type":""},{"name":"黄焰","type":""},{"name":"泼墨","type":""},{"name":"金玉良缘","type":""},{"name":"蜜桃花毛茛","type":""},{"name":"甜橙美女樱","type":""}]},
+  {"gardener":"颜如玉","flowers":[{"name":"星蓝山月桂","type":""}]},
+  {"gardener":"闻人语彤","flowers":[{"name":"月白舞花姜","type":""},{"name":"霁蓝堇兰","type":""},{"name":"橙黄虞美人","type":""},{"name":"星蓝山月桂","type":""}]},
+  {"gardener":"笙箫芸汐","flowers":[{"name":"黛紫虞美人","type":""},{"name":"嫣紫金鱼草","type":""},{"name":"雪樱大花芙蓉","type":""},{"name":"奶黄花毛茛","type":""},{"name":"浅韵美女樱","type":""},{"name":"甜橙美女樱","type":""},{"name":"伯利恒之星","type":""},{"name":"曼珠沙华","type":""},{"name":"幻紫铁线莲","type":""},{"name":"青碧华珊","type":""},{"name":"霁蓝堇兰","type":""},{"name":"粉花绮梦","type":""},{"name":"花映长思","type":""}]}
+];
+
+// ---- State ----
+let gardenData = [];
+let searchQuery = '';
+let addFlowerTargetIndex = -1;
+let renameGardenerIndex = -1;
+
+function loadData() {
+  try {
+    const saved = localStorage.getItem('gardenData_zhi');
+    if (saved) {
+      gardenData = JSON.parse(saved);
+    } else {
+      gardenData = JSON.parse(JSON.stringify(INITIAL_DATA));
+    }
+  } catch(e) {
+    gardenData = JSON.parse(JSON.stringify(INITIAL_DATA));
+  }
+}
+
+function saveData() {
+  localStorage.setItem('gardenData_zhi', JSON.stringify(gardenData));
+}
+
+// ---- Render ----
+function render() {
+  updateStats();
+  if (searchQuery.trim()) {
+    renderSearch();
+  } else {
+    document.getElementById('resultsPanel').classList.remove('open');
+    renderCards(gardenData);
+  }
+}
+
+function updateStats() {
+  const total = gardenData.reduce((s, g) => s + g.flowers.length, 0);
+  document.getElementById('statsBar').textContent =
+    `共 ${gardenData.length} 位花匠，${total} 朵花`;
+}
+
+function renderCards(data) {
+  const grid = document.getElementById('cardsGrid');
+  if (data.length === 0) {
+    grid.innerHTML = '<div class="empty-state"><div class="emoji">🌱</div><p>暂无花匠数据</p></div>';
+    return;
+  }
+  grid.innerHTML = data.map((g, idx) => {
+    const realIdx = gardenData.indexOf(g);
+    const rows = g.flowers.map((f, fi) => `
+      <tr>
+        <td class="flower-name">${f.name}</td>
+        <td>
+          <span class="type-tag ${f.type ? '' : 'empty'}" 
+            onclick="editType(${realIdx},${fi},this)"
+            title="点击编辑类型">
+            ${f.type || '点击添加类型'}
+          </span>
+        </td>
+        <td class="flower-actions">
+          <button class="btn btn-danger btn-sm" onclick="deleteFlower(${realIdx},${fi})">删除</button>
+        </td>
+      </tr>`).join('');
+    return `
+    <div class="card" id="card-${realIdx}">
+      <div class="card-header">
+        <div>
+          <h3>🌸 ${g.gardener}</h3>
+          <span class="flower-count">${g.flowers.length} 朵花</span>
+        </div>
+        <div class="card-header-actions">
+          <button class="icon-btn" title="修改花匠名" onclick="openRenameGardener(${realIdx})">✏️</button>
+          <button class="icon-btn" title="添加花朵" onclick="openAddFlower(${realIdx})">＋</button>
+          <button class="icon-btn" title="删除花匠" onclick="deleteGardener(${realIdx})">🗑</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <table class="flower-table">
+          <thead><tr><th>花名</th><th>类型</th><th></th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ---- Search ----
+function doSearch() {
+  searchQuery = document.getElementById('searchInput').value.trim();
+  render();
+}
+
+function clearSearch() {
+  document.getElementById('searchInput').value = '';
+  searchQuery = '';
+  render();
+}
+
+function renderSearch() {
+  const q = searchQuery.toLowerCase();
+  const panel = document.getElementById('resultsPanel');
+  let results = [];
+
+  gardenData.forEach(g => {
+    // Match gardener name
+    if (g.gardener.toLowerCase().includes(q)) {
+      g.flowers.forEach(f => {
+        results.push({ gardener: g.gardener, flower: f.name, type: f.type, matchGardener: true });
+      });
+      return;
+    }
+    // Match flower name
+    g.flowers.forEach(f => {
+      if (f.name.toLowerCase().includes(q)) {
+        results.push({ gardener: g.gardener, flower: f.name, type: f.type, matchGardener: false });
+      }
+    });
+  });
+
+  // Also render cards with highlights
+  const matchedGardeners = gardenData.filter(g =>
+    g.gardener.toLowerCase().includes(q) ||
+    g.flowers.some(f => f.name.toLowerCase().includes(q))
+  );
+  renderCards(matchedGardeners);
+
+  if (results.length === 0) {
+    panel.innerHTML = '<div style="text-align:center;padding:20px;color:#999;">未找到匹配结果</div>';
+    panel.classList.add('open');
+    return;
+  }
+
+  panel.innerHTML = `
+    <div style="color:#666;font-size:0.85rem;margin-bottom:8px;">找到 ${results.length} 条结果：</div>
+    ${results.map(r => `
+      <div class="result-item">
+        <div class="ri-flower">🌸</div>
+        <div class="ri-info">
+          <h4>${r.flower}</h4>
+          <p>类型：${r.type || '未设置'}</p>
+        </div>
+        <div class="ri-gardener">🌿 ${r.gardener}</div>
+      </div>`).join('')}`;
+  panel.classList.add('open');
+}
+
+// ---- Type Edit ----
+function editType(gIdx, fIdx, el) {
+  const current = gardenData[gIdx].flowers[fIdx].type || '';
+  const input = document.createElement('input');
+  input.className = 'type-edit-input';
+  input.value = current;
+  input.placeholder = '输入类型…';
+  el.replaceWith(input);
+  input.focus();
+  input.select();
+
+  function commit() {
+    const val = input.value.trim();
+    gardenData[gIdx].flowers[fIdx].type = val;
+    saveData();
+    render();
+  }
+  input.addEventListener('blur', commit);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') commit();
+    if (e.key === 'Escape') { render(); }
+  });
+}
+
+// ---- Add Gardener ----
+function openAddGardener() {
+  document.getElementById('newGardenerName').value = '';
+  openModal('modalAddGardener');
+  setTimeout(() => document.getElementById('newGardenerName').focus(), 100);
+}
+
+function confirmAddGardener() {
+  const name = document.getElementById('newGardenerName').value.trim();
+  if (!name) { showToast('请输入花匠名称！'); return; }
+  if (gardenData.some(g => g.gardener === name)) { showToast('该花匠已存在！'); return; }
+  gardenData.push({ gardener: name, flowers: [] });
+  saveData();
+  closeModal('modalAddGardener');
+  render();
+  showToast('🌱 花匠 "' + name + '" 已添加！');
+}
+
+// ---- Add Flower ----
+function openAddFlower(gIdx) {
+  addFlowerTargetIndex = gIdx;
+  document.getElementById('newFlowerName').value = '';
+  document.getElementById('newFlowerType').value = '';
+  openModal('modalAddFlower');
+  setTimeout(() => document.getElementById('newFlowerName').focus(), 100);
+}
+
+function confirmAddFlower() {
+  const name = document.getElementById('newFlowerName').value.trim();
+  const type = document.getElementById('newFlowerType').value.trim();
+  if (!name) { showToast('请输入花名！'); return; }
+  gardenData[addFlowerTargetIndex].flowers.push({ name, type });
+  saveData();
+  closeModal('modalAddFlower');
+  render();
+  showToast('🌸 花朵 "' + name + '" 已添加！');
+}
+
+// ---- Rename Gardener ----
+function openRenameGardener(gIdx) {
+  renameGardenerIndex = gIdx;
+  document.getElementById('renameGardenerInput').value = gardenData[gIdx].gardener;
+  openModal('modalRenameGardener');
+  setTimeout(() => { const el = document.getElementById('renameGardenerInput'); el.focus(); el.select(); }, 100);
+}
+
+function confirmRenameGardener() {
+  const name = document.getElementById('renameGardenerInput').value.trim();
+  if (!name) { showToast('请输入新名称！'); return; }
+  gardenData[renameGardenerIndex].gardener = name;
+  saveData();
+  closeModal('modalRenameGardener');
+  render();
+  showToast('✏️ 花匠名称已更新！');
+}
+
+// ---- Delete ----
+function deleteGardener(gIdx) {
+  if (!confirm('确认删除花匠 "' + gardenData[gIdx].gardener + '" 及其所有花朵？')) return;
+  const name = gardenData[gIdx].gardener;
+  gardenData.splice(gIdx, 1);
+  saveData();
+  render();
+  showToast('🗑 花匠 "' + name + '" 已删除');
+}
+
+function deleteFlower(gIdx, fIdx) {
+  const name = gardenData[gIdx].flowers[fIdx].name;
+  gardenData[gIdx].flowers.splice(fIdx, 1);
+  saveData();
+  render();
+  showToast('🗑 "' + name + '" 已删除');
+}
+
+// ---- Export / Import ----
+function exportData() {
+  const json = JSON.stringify(gardenData, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '花园数据_执.json';
+  a.click();
+  showToast('📤 数据已导出！');
+}
+
+function importData() {
+  document.getElementById('importText').value = '';
+  openModal('modalImport');
+}
+
+function confirmImport() {
+  try {
+    const data = JSON.parse(document.getElementById('importText').value);
+    if (!Array.isArray(data)) throw new Error();
+    gardenData = data;
+    saveData();
+    closeModal('modalImport');
+    render();
+    showToast('📥 数据导入成功！');
+  } catch(e) {
+    showToast('❌ JSON 格式错误，请检查！');
+  }
+}
+
+// ---- Modal helpers ----
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+});
+
+// Enter key in modals
+document.getElementById('newGardenerName').addEventListener('keydown', e => { if (e.key === 'Enter') confirmAddGardener(); });
+document.getElementById('newFlowerName').addEventListener('keydown', e => { if (e.key === 'Enter') confirmAddFlower(); });
+document.getElementById('renameGardenerInput').addEventListener('keydown', e => { if (e.key === 'Enter') confirmRenameGardener(); });
+
+// ---- Toast ----
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ---- Init ----
+loadData();
+render();
+</script>
+</body>
+</html>
